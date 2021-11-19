@@ -1,4 +1,58 @@
-To address such privacy challenge, a promising method is to use homomorphic encryption to encrypt the user data sent to the cloud, and the cloud performs inference on the ciphertext while the data privacy get protected, leading to a secure MLaaS process. 
-However, homomorphic encryption poses a prohibitively demanding computation workload on edge devices. Another relatively lightweight approach adds perturbations or noise to the user data before sending to the cloud host for inference. However, this approach may compromise the prediction accuracy of inference data due to the added noise and cannot fully eliminate the privacy concern depending on the amount of noise added. It is possible the DNNs model need retraining to reclaim the accuracy in practice but may not be feasible because the model may not be accessed. 
+\subsection{General HDC Arithmetic}
+The basic component of HDC is called hypervectors (HVs). HVs are high-dimensional (e.g., dimension $D = 10,000$), holographic vectors with random and identically distributed (i.i.d.) elements~\cite{kanerva2009hyperdimensional}. An HV with $d$ dimensions can be denoted as $\vv{HV} = \langle hv_1, \dots, hv_d\rangle$, where $hv_i$ represents the $i$ element of the HV. HVs are used to accommodate and represent information in different scales and levels. When the dimensionality is sufficiently high, e.g., $D = 10,000$, any two random HVs are nearly orthogonal~\cite{kanerva2009hyperdimensional}. HDC utilizes this quasi-orthogonality property and different operations to support as means of producing aggregations of information or creating representations of new information. 
 
-In this paper, we focus on a recently emerging brain-inspired AI method called the hyperdimensional computing (HDC). HDC has demonstrated promising capability in a wide range of applications including computer vision~\cite{hersche2020integrating, neubert2021hyperdimensional}, audio~\cite{imani2017voicehd}, robotics~\cite{mitrokhin2019learning}, and natural language processing~\cite{rahimi2016robust}. HDC is inspired by the working mechanism of the human brain which computes embedded and abstract patterns of neural signals rather than actual numbers~\cite{kanerva2009hyperdimensional}. This inspires the formulation of hyperdimensional vectors with fully distributed holographic representation and (pseudo) randomness.
+HDC provides three basic operations, addition ($+$), multiplication ($*$) and permutation ($\rho$), as elaborated in Eq.~\ref{eqn:operation}. Addition and multiplication take two input HVs as operands and perform element-wise add or multiply operations on the two HVs. Permutation takes one HV as the input operand and performs circular shifting. Each of the operations have no modification on the dimensionality of the input HVs, i.e. the input and the output HVs are in the same dimension.
+
+\begin{equation}
+    \begin{aligned}
+       & \vv{HV_i} + \vv{HV_j} = \langle hv_{i1} + hv_{j1}, \dots, hv_{id} + hv_{jd}\rangle \\
+       & \vv{HV_i} \cdot \vv{HV_j} = \langle hv_{i1} * hv_{j1}, \dots, hv_{id} * hv_{jd}\rangle 
+    \end{aligned}
+\label{eqn:operation}
+\end{equation}
+
+
+\textbf{Similarity Measurement}
+In this paper, we use the cosine similarity metric $\delta$ to measure the distance between two HVs, as well as the similarity of information encoded in the HVs. The cosine similarity $\delta$ between two HVs close to $1$ means that the two HVs have more information in common. On the other hand, if the cosine similarity close to $0$, which means these two HVs are mutually orthogonal, indicates that the information encoded in the two HVs are not related. 
+
+The similarity metric $\delta$ denotes as Eq.~\ref{eqn:sim}. When the dimensionality is sufficiently high (e.g., $D = 10,000$), any two random generated bipolar HVs are close to orthogonal~\cite{kanerva2009hyperdimensional}. 
+%For instance, as Eq.~\ref{eqn:sim} shows, the cosine distance  $\delta(\vv{H_x}, \vv{H_y})$ between any two randomly generated HVs approximately equals zero.
+
+\begin{equation}
+    \delta(\vv{HV_i}, \vv{HV_j}) = \frac{\vv{HV_i} \cdot \vv{HV_j}}{||\vv{HV_i}||\times||\vv{HV_j}||}
+\label{eqn:sim}
+\end{equation}
+
+
+\subsection{General HDC Process}
+To develop HDC models for classification on specific tasks, we need four main processes including encoding process, training process, and inference process. In the following, we describe these principal processes.
+
+First of all, encoding is the process to project a real-world feature vector into an HV. In this paper, we follow an $ID$-based encoding strategy~\cite{imani2019framework}. First, we generate $N$ base HVs in the HDC item memory (IM) which corresponds to the $N$ features in the dataset. For instance, for the feature vector $\vv{F_n} = {\langle f_1, \dots, f_n\rangle}$ consisting of $n$ features, we generate $n$ quasi-orthogonal base HVs $\{\vv{B_1}, \dots, \vv{B_n}\}$, mapping to each feature. Then we multiply the feature values with the corresponding HVs. At the end of encoding progress, we aggregate all product HVs into one HV $\vv{H_{F_n}}$ representing the entire feature vector $\vv{F_n}$. The encoding process as shown in Eq.~\ref{eqn:encode}.
+
+%Note that the encoded HV now represents the raw input feature vector through the entire HDC life-cycle. During the training, retraining, inference and outlier detection processes, HDC must use the same encoding method.
+
+
+\begin{equation}
+    \begin{aligned}
+    \vv{HV_{F_n}} = \sum_{i = 1}^{n} f_i * \vv{B_i}
+\end{aligned}
+\label{eqn:encode}
+\end{equation}
+
+Secondly, Training is the process of establishing the associative memory (AM) over the entire training set. For the classification task with $k$ classes, we encode each training sample into $\vv{HV^{i}}$ where $i$ indicates the corresponding label. Eq.~\ref{eqn:train} illustrates the process of HDC training by bundling (adding) all HVs representing related feature vectors sharing the same label. After the aggregation, the $AM$ will be consisted of $k$ class HVs $\{\vv{HV_{c1}}, \dots, \vv{HV_{ck}}\}$, which represent the information of all the correlated samples.
+
+\begin{equation}
+    \begin{aligned}
+       AM = \{\vv{HV_{c1}}, \dots, \vv{HV_{ck}}\} = \{ \sum\vv{HV^1}, \dots, \sum\vv{HV^k} \}
+    \end{aligned}
+    \label{eqn:train}
+\end{equation}
+
+Inference is the process of classify the unseen data from the testing set. First, we encode the testing sample $q$ into an HV called query HV $\vv{HV_q}$ based on the same $IM$ and encoding strategy in Eq.~\ref{eqn:encode}. Then we measure the cosine distance ($\delta$) between a query HV $\vv{HV_q}$ and the $k$ class HVs in $AM$ to obtain the similarity. As Eq.~\ref{eqn:inference} indicates, the class with the highest similarity denotes the category of query HV $x$.
+
+\begin{equation}
+    \begin{aligned}
+      x = argmax(\delta(\vv{HV_q}, \vv{HV}_{c1}), \dots, \delta(\vv{HV_q}, \vv{HV}_{ck}))
+    \end{aligned}
+    \label{eqn:inference}
+\end{equation}
